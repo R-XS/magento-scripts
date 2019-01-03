@@ -1,0 +1,37 @@
+ini_set('display_errors', 1);
+set_time_limit(0);
+ini_set("memory_limit",-1);
+ini_set('max_execution_time','1800000000');
+
+define('MAGENTO_ROOT', getcwd());
+require_once  (MAGENTO_ROOT . '../../app/Mage.php');
+
+Mage::app();
+Mage::app()->getStore()->setId(Mage_Core_Model_App::ADMIN_STORE_ID);
+Mage::init();
+
+$fromDate = '2016-12-01 00:00:00';
+$toDate = '2017-04-01 00:00:00';//$toDate = '2017-05-31 23:59:59';
+
+$order = Mage::getResourceModel('sales/order_grid_collection');
+$order->addAttributeToSelect('*');
+$order->addFieldToFilter('created_at', array('from'=>$fromDate,'to'=>$toDate));
+$order->setOrder('increment_id', 'DESC');
+
+$fp = fopen('sales-order-export.csv', 'w');
+$field = array('OrderNumber','Date','products quantity','payment method');
+fputcsv($fp, $field);
+echo "<pre>";
+foreach($order as $orders)
+{
+    $countTotalQty = 0; 
+    foreach ($orders->getAllItems() as $item)
+    {
+        $countTotalQty = $countTotalQty + $item->getQtyOrdered();
+    }
+    $payment = $orders->getPayment();
+    $fields = array($orders->getIncrementId(),$orders->getCreatedAt(),$countTotalQty,$payment->getMethod());
+    fputcsv($fp, $fields);
+
+
+}
